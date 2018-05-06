@@ -1,0 +1,67 @@
+#include <ESP8266WiFi.h>
+#include <WiFiUdp.h>
+WiFiUDP Udp;
+unsigned int localUdpPort = 4210;
+char incomingPacket[255];
+char  replyPacekt[10];
+
+const char* ssid     = "siddhesh";
+const char* password = "8793152209s";
+ int status=0;
+void setup() {
+  Serial.begin(115200);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println(WiFi.localIP());
+
+  Udp.begin(localUdpPort);
+  Serial.println("After begin");
+
+  pinMode(13, OUTPUT);
+}
+
+void loop() {
+  int packetSize = Udp.parsePacket();
+ 
+  if (packetSize)
+  {
+    Serial.printf("Received %d bytes from %s, port %d\n", packetSize, Udp.remoteIP().toString().c_str(), Udp.remotePort());
+    int len = Udp.read(incomingPacket, 255);
+    if (len > 0)
+    {
+      incomingPacket[len] = 0;
+    }
+    Serial.println(incomingPacket);
+    if (!strcmp(incomingPacket,"on")) {
+      Serial.println("Inside if");
+      digitalWrite(13, HIGH);
+      strcpy(replyPacekt,"Light Turned on");
+      status = 1;
+    }
+    else if (!strcmp(incomingPacket,"off")) {
+      Serial.println("Inside else");
+      digitalWrite(13, LOW);
+      strcpy(replyPacekt,"Light Turned off");
+      status = 0;
+    }
+    else if (!strcmp(incomingPacket,"status")) {
+      if (status == 0){
+        strcpy(replyPacekt,"Light is off");
+        }
+       else {
+        strcpy(replyPacekt,"Light is on");
+        }
+    }
+    else {
+      Serial.printf("%d %d ", incomingPacket[0], incomingPacket[1]);
+    }
+    Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
+    Udp.write(replyPacekt);
+    Udp.endPacket();
+  }
